@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
+# CORS pentru orice frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -11,58 +12,72 @@ app.add_middleware(
 )
 
 @app.post("/api/recomanda")
-async def recomanda(data: Request):
-    json_data = await data.json()
+async def recomanda(request: Request):
+    data = await request.json()
 
-    forma = json_data.get("formaFetei")
-    genul = json_data.get("genul")
-    stilul = json_data.get("stilul")
-    latimeFata = float(json_data.get("latimeFata", 0))
-    inaltimeFata = float(json_data.get("inaltimeFata", 0))
-    distOchi = float(json_data.get("distOchi", 0))
-    latimeBarbie = float(json_data.get("latimeBarbie", 0))
-    raport = float(json_data.get("raport", 1))
-    interpupilara = float(json_data.get("interpupilara", 0))
-    latimeNas = float(json_data.get("latimeNas", 0))
-    inaltimeFrunte = float(json_data.get("inaltimeFrunte", 0))
-    latimeSprancene = float(json_data.get("latimeSprancene", 0))
+    forma = data.get("formaFetei")
+    gen = data.get("genul")
+    stil = data.get("stilul")
 
-    recomandari = []
+    # Colectare masuratori numerice
+    try:
+        latime_fata = float(data.get("latimeFata", 0))
+        inaltime_fata = float(data.get("inaltimeFata", 0))
+        dist_ochi = float(data.get("distOchi", 0))
+        latime_barbie = float(data.get("latimeBarbie", 0))
+        raport = float(data.get("raport", 0))
+        interpupilara = float(data.get("interpupilara", 0))
+        latime_nas = float(data.get("latimeNas", 0))
+        inaltime_frunte = float(data.get("inaltimeFrunte", 0))
+        latime_sprancene = float(data.get("latimeSprancene", 0))
+    except:
+        return {"recomandare": "Datele primite nu au fost în format numeric valid."}
 
-    # Reguli generale după formă
+    # Analiză profesională
+    analiza = f"""🔍 **Analiză facială**:
+- Forma feței detectată: **{forma}**
+- Raport lățime/înălțime: {raport:.2f}
+- Distanță interpupilară: {interpupilara:.2f} px
+- Lățime față: {latime_fata:.2f} px | Înălțime față: {inaltime_fata:.2f} px
+- Lățime barbie: {latime_barbie:.2f} px | Lățime nas: {latime_nas:.2f} px
+- Înălțime frunte: {inaltime_frunte:.2f} px | Lățime sprâncene: {latime_sprancene:.2f} px
+
+👤 **Preferințe utilizator**:
+- Gen: {gen}
+- Stil preferat: {stil}
+"""
+
+    # Recomandare logică – ajustabilă după caz
+    sugestii = ""
+
+    # Recomandări în funcție de forma feței
     if forma == "Rotundă":
-        recomandari.append("rame pătrate sau dreptunghiulare pentru a adăuga unghiuri feței")
+        sugestii += "- Alege rame pătrate sau dreptunghiulare care alungesc fața.\n"
+        if stil == "Elegant":
+            sugestii += "- Ramele subțiri din metal sau titan pot accentua rafinamentul.\n"
     elif forma == "Ovală":
-        recomandari.append("aproape orice formă se potrivește, dar evită ramele prea mari")
+        sugestii += "- Ai noroc! Forma feței tale permite aproape orice tip de rame.\n"
+        if stil == "Casual":
+            sugestii += "- Ramele din acetat colorat sau modele mai îndrăznețe pot fi o alegere bună.\n"
     elif forma == "Alungită":
-        recomandari.append("rame mai înalte, cu lentile ovale sau rotunde, care echilibrează lungimea")
+        sugestii += "- Recomandăm rame mai înalte, rotunjite, care să echilibreze lungimea feței.\n"
+        if stil == "Sport":
+            sugestii += "- Ramele late, cu prindere bună și unghiuri curbate pot oferi și funcționalitate.\n"
+    else:
+        sugestii += "- Pentru forma feței tale, consultă un optician pentru o analiză personalizată.\n"
 
-    # Lățime față
-    if latimeFata < 100:
-        recomandari.append("ramele înguste sunt mai potrivite pentru fețele mici")
-    elif latimeFata > 160:
-        recomandari.append("alege rame late pentru a echilibra proporțiile")
-
-    # Interpupilară
-    if interpupilara < 60:
-        recomandari.append("evită punțile nazale foarte largi")
+    # Ajustări în funcție de distanța interpupilară
+    if interpupilara < 55:
+        sugestii += "- Ai o distanță interpupilară mică, așa că rame înguste vor arăta mai bine.\n"
     elif interpupilara > 70:
-        recomandari.append("alege rame cu punte mai lată pentru confort vizual")
+        sugestii += "- O distanță interpupilară mare poate fi echilibrată cu rame largi.\n"
 
-    # Stil preferat
-    if stilul == "Elegant":
-        recomandari.append("recomandăm rame metalice subțiri, aurii sau argintii")
-    elif stilul == "Casual":
-        recomandari.append("rame din acetat, în culori calde sau naturale")
-    elif stilul == "Sport":
-        recomandari.append("rame ușoare, curbate, din materiale rezistente")
+    # Construcția finală a răspunsului
+    recomandare = f"""{analiza}
 
-    # Genul (ca accent, nu diferență radicală)
-    if genul == "Feminin":
-        recomandari.append("poți încerca și rame cu design delicat, pastel sau cat-eye")
-    elif genul == "Masculin":
-        recomandari.append("forme clasice precum pătrate sau dreptunghiulare, în culori neutre")
+🎯 **Recomandare profesională**:
+{suggestii.strip()}
+"""
 
-    mesaj_final = " ".join(recomandari)
-    return {"raspuns": mesaj_final}
+    return {"recomandare": recomandare}
 
